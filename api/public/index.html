@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LinkedIn Connector API</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">LinkedIn Connector</div>
+    <nav>
+      <a href="/docs.html">API Docs</a>
+      <a href="/login.html">Sign in</a>
+      <a href="/signup.html"><button style="width:auto;padding:7px 14px;">Sign up free</button></a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Search LinkedIn posts and react to them, through one API.</h1>
+    <p class="lead">
+      Connect your LinkedIn account once via the browser extension, then call a
+      clean REST API for keyword post search and post reactions — governed and
+      paced so your account stays healthy.
+    </p>
+
+    <div class="card">
+      <h3>How it works</h3>
+      <div class="row"><div><b>1.</b> Create an account and grab your API key from the dashboard.</div></div>
+      <div class="row"><div><b>2.</b> Download the connector extension and log into LinkedIn as you normally do.</div></div>
+      <div class="row"><div><b>3.</b> Click "Connect this account" in the extension popup.</div></div>
+      <div class="row"><div><b>4.</b> Call the API with your key. See the <a href="/docs.html">docs</a>.</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Why not just scrape it yourself</h3>
+      <p class="muted" style="margin:0;">
+        Every request is paced by a rate governor, runs with a real Chrome TLS
+        fingerprint, and halts automatically the moment LinkedIn shows a warning
+        sign — instead of retrying into a ban. Full request audit log included.
+      </p>
+    </div>
+
+    <a href="/signup.html"><button>Get your API key</button></a>
+  </main>
+
+  <footer>LinkedIn Connector — not affiliated with LinkedIn Corporation.</footer>
+</body>
+</html>

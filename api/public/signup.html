@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign up — LinkedIn Connector</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="/" style="color:inherit;">LinkedIn Connector</a></div>
+    <nav><a href="/login.html">Already have an account? Sign in</a></nav>
+  </header>
+
+  <main>
+    <h1>Create your account</h1>
+    <p class="lead">Free to sign up. You'll get an organization and can mint API keys right after.</p>
+
+    <form id="form">
+      <label for="name">Name</label>
+      <input id="name" type="text" required />
+
+      <label for="email">Email</label>
+      <input id="email" type="email" required />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" minlength="8" required />
+
+      <div class="error" id="error"></div>
+      <button id="submit" type="submit">Create account</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { auth } from "/client.js";
+    import { ApiError } from "/client.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("error").textContent = "";
+      $("submit").disabled = true;
+      try {
+        await auth.signUp($("email").value.trim(), $("password").value, $("name").value.trim());
+        window.location.href = "/dashboard.html";
+      } catch (err) {
+        $("error").textContent = err instanceof ApiError ? err.message : "Could not reach the server.";
+        $("submit").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

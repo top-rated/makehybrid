@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — LinkedIn Connector</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">LinkedIn Connector</div>
+    <nav>
+      <span class="muted" id="whoami"></span>
+      <a href="/docs.html">API Docs</a>
+      <a href="#" id="signout">Sign out</a>
+    </nav>
+  </header>
+
+  <main class="wide">
+    <h1>Dashboard</h1>
+
+    <div class="card">
+      <h3>1. Download the connector extension</h3>
+      <p class="muted">
+        Load it in Chrome, then log into LinkedIn as you normally do and click
+        "Connect this account" in the extension popup.
+      </p>
+      <a href="/downloads/linkedin-connector.zip" download>
+        <button class="secondary" style="width:auto;">Download extension (.zip)</button>
+      </a>
+      <p class="muted" style="margin-top:10px;">
+        Unzip it, then in Chrome go to <code class="inline">chrome://extensions</code>,
+        enable <b>Developer mode</b> (top right), and click <b>Load unpacked</b> →
+        select the unzipped folder.
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>2. Connected LinkedIn accounts</h3>
+      <div id="accounts"><span class="muted">Loading…</span></div>
+    </div>
+
+    <div class="card">
+      <h3>3. API keys</h3>
+      <p class="muted">Use one of these as the <code class="inline">x-api-key</code> header. See the <a href="/docs.html">API docs</a>.</p>
+
+      <form id="createKeyForm" style="flex-direction:row;align-items:flex-end;gap:8px;max-width:none;">
+        <div style="flex:1;">
+          <label for="keyName">Key name</label>
+          <input id="keyName" type="text" placeholder="e.g. production" required />
+        </div>
+        <button type="submit" style="width:auto;">Create key</button>
+      </form>
+
+      <div id="newKeyBox" class="hidden" style="margin-top:14px;">
+        <p class="muted"><b>Copy this now — it will not be shown again.</b></p>
+        <div class="keyval">
+          <code class="mono" id="newKeyValue" style="flex:1;"></code>
+          <button class="small secondary" id="copyKeyBtn">Copy</button>
+        </div>
+      </div>
+
+      <div id="keysList" style="margin-top:14px;"><span class="muted">Loading…</span></div>
+    </div>
+  </main>
+
+  <script type="module" src="/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+:root {
+  --blue: #0a66c2;
+  --blue-dark: #084a8f;
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --border: #e2e6ea;
+  --text: #1a1a1a;
+  --muted: #666;
+  --danger: #d13438;
+  --ok: #2e9e4a;
+  --warn: #e0a100;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 14px/1.5 -apple-system, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+header .brand { font-weight: 700; font-size: 16px; color: var(--blue); }
+header nav a { margin-left: 18px; font-size: 13px; color: var(--text); }
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+main.wide { max-width: 960px; }
+
+h1 { font-size: 26px; margin: 0 0 8px; }
+h2 { font-size: 18px; margin: 28px 0 10px; }
+p.lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.card h3 { margin: 0 0 12px; font-size: 15px; }
+
+form { display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
+
+label { font-size: 12px; color: var(--muted); font-weight: 600; }
+
+input, select {
+  padding: 9px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+}
+
+button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:hover { background: var(--blue-dark); }
+button:disabled { opacity: .55; cursor: default; }
+button.secondary { background: #eef3f8; color: var(--blue); }
+button.danger { background: #fdeceb; color: var(--danger); }
+button.small { padding: 5px 10px; font-size: 12px; width: auto; }
+
+.error { color: var(--danger); font-size: 13px; min-height: 18px; }
+.muted { color: var(--muted); font-size: 13px; }
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.row:last-child { border-bottom: none; }
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px; flex-shrink: 0;
+}
+.dot.healthy { background: var(--ok); }
+.dot.needs_reconnect, .dot.checkpoint { background: var(--warn); }
+.dot.halted, .dot.banned { background: var(--danger); }
+.dot.paused { background: #999; }
+
+code, pre, .mono {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12.5px;
+}
+pre {
+  background: #0d1117;
+  color: #c9d1d9;
+  padding: 14px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+code.inline {
+  background: #eef1f4;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.keyval {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f0f7ff;
+  border: 1px solid #cfe3f7;
+  border-radius: 6px;
+  padding: 8px 10px;
+  word-break: break-all;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #eef3f8;
+  color: var(--blue);
+}
+
+.hidden { display: none !important; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+table th, table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+table th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+
+.method { font-weight: 700; font-size: 11px; padding: 2px 6px; border-radius: 4px; margin-right: 8px; }
+.method.get { background: #e6f4ea; color: var(--ok); }
+.method.post { background: #e6f0fa; color: var(--blue); }
+.method.patch, .method.put { background: #fff3e0; color: #b26a00; }
+.method.delete { background: #fdeceb; color: var(--danger); }
+
+.endpoint { margin-bottom: 26px; }
+.endpoint .path { font-size: 14px; font-weight: 600; }
+
+footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 0; }

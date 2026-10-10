@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>API Docs — LinkedIn Connector</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="/" style="color:inherit;">LinkedIn Connector</a></div>
+    <nav>
+      <a href="/dashboard.html">Dashboard</a>
+      <a href="/login.html">Sign in</a>
+    </nav>
+  </header>
+
+  <main class="wide">
+    <h1>API Reference</h1>
+    <p class="lead">Base URL: <code class="inline">http://localhost:3001</code> in this environment.</p>
+
+    <h2>Authentication — two separate models</h2>
+    <div class="card">
+      <p>This API has <b>two distinct ways to authenticate</b>, for two distinct callers. Don't mix them up.</p>
+      <table>
+        <thead><tr><th></th><th>Session auth</th><th>API-key auth</th></tr></thead>
+        <tbody>
+          <tr><td>Who it's for</td><td>A signed-in human, or the browser extension acting for them</td><td>An external application/server calling this API programmatically</td></tr>
+          <tr><td>Credential</td><td>Bearer token or cookie from <code class="inline">/api/auth/sign-in/email</code></td><td><code class="inline">x-api-key</code> header, from the <a href="/dashboard.html">dashboard</a></td></tr>
+          <tr><td>Routes</td><td><code class="inline">/v1/me/*</code></td><td>Everything else under <code class="inline">/v1/*</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Getting an API key</h2>
+    <div class="card">
+      <ol style="margin:0; padding-left:20px;">
+        <li><a href="/signup.html">Sign up</a>, or <a href="/login.html">sign in</a>.</li>
+        <li>On the <a href="/dashboard.html">dashboard</a>, create a key under "API keys". The plaintext value is shown <b>once</b> — copy it immediately.</li>
+        <li>Send it as <code class="inline">x-api-key: &lt;your key&gt;</code> on every request below.</li>
+      </ol>
+    </div>
+
+    <h2>Errors</h2>
+    <div class="card">
+      <table>
+        <tbody>
+          <tr><td><code class="mono">400</code></td><td>Invalid request body (Zod validation failure — check <code class="inline">issues</code> in the response)</td></tr>
+          <tr><td><code class="mono">401</code></td><td>Missing/invalid credential</td></tr>
+          <tr><td><code class="mono">403</code></td><td>Credential valid, but lacks the required scope</td></tr>
+          <tr><td><code class="mono">404</code></td><td>Not found, or not yours (accounts/keys/posts are org-scoped — a wrong-org id looks identical to a missing one)</td></tr>
+          <tr><td><code class="mono">409</code></td><td>Conflict — e.g. already reacted, or an idempotency-key replay of a different request</td></tr>
+          <tr><td><code class="mono">422</code></td><td>Request is well-formed but the account can't do this right now (halted, needs reconnect, etc.)</td></tr>
+          <tr><td><code class="mono">429</code></td><td>Rate/quota limit hit on a read — retry after the given <code class="inline">Retry-After</code></td></tr>
+          <tr><td><code class="mono">503</code></td><td>The LinkedIn worker tier is unreachable</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Session-authed — <code class="inline">/v1/me/*</code></h2>
+    <p class="muted">What the extension calls. Send the bearer token as <code class="inline">Authorization: Bearer &lt;token&gt;</code>, or rely on the session cookie if calling from the dashboard itself.</p>
+
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/me</div>
+      <p class="muted">Who am I, and my organization. Auto-creates and activates an organization on first call if you have none.</p>
+      <pre>{ "data": { "user": { "id", "email", "name" }, "organization_id": "..." } }</pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/me/accounts/connect</div>
+      <p class="muted">Connect a LinkedIn account. Body carries the session read by the extension from <code class="inline">chrome.cookies</code> — you will not normally call this by hand.</p>
+      <pre>{ "li_at", "jsessionid", "user_agent", "timezone", "label"? }
+→ 201 { "data": { "account_id", "status": "healthy", "reconnected": false } }
+→ 422 { "error": "session_invalid" }   // LinkedIn rejected the session</pre>
+    </div>
+
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/me/accounts</div>
+      <p class="muted">List LinkedIn accounts connected to your organization.</p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/me/accounts/:id</div>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method patch">PATCH</span>/v1/me/accounts/:id</div>
+      <p class="muted">Body: <code class="inline">{ "status": "paused" | "healthy" }</code>. A <code class="inline">halted</code> account cannot be forced healthy — reconnect it instead.</p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method delete">DELETE</span>/v1/me/accounts/:id</div>
+    </div>
+
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/me/keys</div>
+      <p class="muted">Create an API key for your organization. Body: <code class="inline">{ "name", "permissions"? }</code>. The plaintext <code class="inline">key</code> is only ever returned in this response.</p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/me/keys</div>
+      <p class="muted">List your keys — prefix only, never the plaintext value.</p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method delete">DELETE</span>/v1/me/keys/:id</div>
+      <p class="muted">Revoke a key immediately.</p>
+    </div>
+
+    <h2>API-key-authed — <code class="inline">/v1/*</code></h2>
+    <p class="muted">
+      Send <code class="inline">x-api-key: &lt;your key&gt;</code>. These are the same operations as
+      <code class="inline">/v1/me/*</code> but for an external application rather than the extension's
+      own user — an app you build against this API mints its own key and manages accounts through here.
+    </p>
+
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/accounts/connect</div>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/accounts</div>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/accounts/:id</div>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/accounts/:id/limits</div>
+      <p class="muted">Live quota: what's used, what's left, when the next action is allowed, per class.</p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method patch">PATCH</span>/v1/accounts/:id</div>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method put">PUT</span>/v1/accounts/:id/limits</div>
+      <p class="muted">
+        Retune limits at runtime. <strong>Three independent mechanisms cap an account</strong>,
+        and raising only one silently does nothing — the other two still bind:
+      </p>
+      <pre>{
+  "classes": {                       // per-operation-class bands
+    "SEARCH": { "dailyMin", "dailyMax", "hourlyMax",
+                "spacingMinS", "spacingMaxS",
+                "windowStart", "windowEnd", "enabled", "skipWindow" },
+    "REACT": {...}, "READ": {...}, "WRITE": {...}
+  },
+  "warmupStages": [                  // the ramp, as data
+    { "minDays": 0, "multiplier": 1.0 }
+  ],
+  "globalDailyCeiling": 1000000      // cross-class cap; null = worker default
+}</pre>
+      <p class="muted">
+        <strong>Warm-up ramp.</strong> A new account's daily target is multiplied by the
+        rung with the greatest <code class="inline">minDays</code> it has reached, so a
+        fresh account does not behave like an established one. A single
+        <code class="inline">{"minDays":0,"multiplier":1.0}</code> means no ramp.
+        Sending <code class="inline">[]</code> clears the rows and returns the account to
+        the built-in defaults — which is <em>not</em> the same as no ramp.
+      </p>
+      <p class="muted">
+        <strong>Global ceiling.</strong> A single daily cap shared across all four classes.
+        This is the one that surprises people: with per-class limits at 1,000,000 and this
+        left at its default, everything still stops at the default. <code class="inline">null</code>
+        restores the worker-wide default.
+      </p>
+      <p class="muted">
+        The older body shape — a bare map of op-class to config, with no
+        <code class="inline">classes</code> wrapper — is still accepted.
+      </p>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method delete">DELETE</span>/v1/accounts/:id</div>
+    </div>
+
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/accounts/-/defaults</div>
+      <div class="path"><span class="method put">PUT</span>/v1/accounts/-/defaults</div>
+      <p class="muted">
+        Org-level defaults that <strong>newly connected accounts inherit</strong>. Same body
+        shape as <code class="inline">PUT /v1/accounts/:id/limits</code>. Set these once and
+        every account you connect afterwards starts with your numbers instead of the
+        built-in conservative ones — no per-account retuning.
+      </p>
+      <p class="muted">
+        Resolution is most-specific-first: <b>the account's own rows</b> →
+        <b>these org defaults</b> → <b>built-in constants</b>. An unset value means
+        <em>inherit the next level down</em>, never "unlimited" — so a brand-new org with
+        nothing configured still gets a real ramp.
+      </p>
+      <p class="muted">
+        Changing these does <b>not</b> touch existing accounts. Use
+        <code class="inline">PUT /v1/accounts/:id/limits</code> for those.
+      </p>
+    </div>
+
+    <h2>Unipile-compatible facade — <code class="inline">/api/v1/*</code></h2>
+    <div class="card">
+      <p>
+        If you already have code written against Unipile, <b>change only the base URL</b>. The facade
+        mirrors Unipile's paths, request shapes, response envelopes and the status codes consumers
+        branch on. Auth is the same header (<code class="inline">X-API-KEY</code>).
+      </p>
+      <p>
+        One deliberate difference: Unipile strips LinkedIn's status and error body, so every refused
+        call looks like the same opaque <code class="inline">400 errors/malformed_request</code>. Here
+        every response also carries <code class="inline">provider_status</code>,
+        <code class="inline">provider_body</code> and <code class="inline">outcome</code>. A Unipile parser
+        ignores the extra keys; you get to see why something failed.
+      </p>
+      <table>
+        <thead><tr><th>Unipile route</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code class="mono">POST /api/v1/linkedin</code></td><td>served</td><td>Magic Route. <code class="inline">{ data }</code> on 2xx; <code class="inline">{ type: "errors/…" }</code> + LinkedIn's status on refusal. <code class="inline">as_organization</code> and <code class="inline">bypass_redirect=false</code> → 501 rather than silent downgrade.</td></tr>
+          <tr><td><code class="mono">POST /api/v1/linkedin/search</code></td><td>served</td><td><code class="inline">url</code> variant only. Returns <code class="inline">{ items, cursor, paging }</code>; cursor is always null (single page).</td></tr>
+          <tr><td><code class="mono">GET /api/v1/linkedin/company/{id|vanity}</code></td><td>served</td><td>Numeric id or vanity slug. <code class="inline">viewer_permissions</code> computed for the passed account. Industry labels/locations not yet resolved (<code class="inline">_mapping: partial</code>).</td></tr>
+          <tr><td><code class="mono">GET /api/v1/accounts</code>, <code class="mono">/accounts/{id}</code>, <code class="mono">DELETE</code></td><td>served</td><td>Status uses Unipile's vocabulary (OK / CREDENTIALS / CHECKPOINT / ERROR / STOPPED). 404 on <code class="inline">/accounts/{id}</code> is definitive.</td></tr>
+          <tr><td><code class="mono">POST /api/v1/accounts</code>, <code class="mono">POST /accounts/{id}</code></td><td>served</td><td>Cookie connect/reconnect: <code class="inline">{ provider, access_token: &lt;li_at&gt;, user_agent }</code>. JSESSIONID is bootstrapped if omitted. Username/password → 501: this service never handles LinkedIn passwords.</td></tr>
+          <tr><td><code class="mono">GET /api/v1/users/me</code>, <code class="mono">/users/{identifier}</code></td><td>served</td><td><code class="inline">provider_id</code> is the <code class="inline">ACoAA…</code> member token. <code class="inline">organizations</code> is <code class="inline">[]</code> for now.</td></tr>
+          <tr><td>chats, posts, invitations, followers, relations, webhooks, hosted links, checkpoint, search/parameters</td><td>501</td><td>Each returns <code class="inline">errors/not_implemented</code> with the closest working alternative in <code class="inline">detail</code>. Most are reachable today through <code class="inline">POST /api/v1/linkedin</code>.</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">
+        The observed Unipile contract this was built against — every endpoint, field alias and status
+        semantic two production consumers actually depend on — is in
+        <code class="inline">docs/unipile-reference/</code>.
+      </p>
+    </div>
+
+    <h3 style="margin-top:26px;">Raw passthrough <span class="badge">needs the worker tier</span></h3>
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/linkedin</div>
+      <p class="muted">
+        Forwards an arbitrary LinkedIn request through a connected account's live session.
+        This is the escape hatch for every LinkedIn surface that has no dedicated endpoint here —
+        profile and company reads, page settings, analytics, invitations, comments, follows.
+      </p>
+      <pre>{ "account_id", "request_url", "method"?, "op_class"?, "body"?, "headers"? }
+→ 200 { "data": { "outcome", "provider_status", "provider_body", "provider_json",
+                  "rejection_kind", "reason" }, "meta": { "quota", "notes" } }
+→ 429 { "error": "quota_exhausted", ... }   ← <em>our</em> quota, not LinkedIn's
+→ 409 { "error": "account_halted", ... }</pre>
+      <p class="muted">
+        <strong>LinkedIn's status and body are never stripped.</strong> A LinkedIn 400 or 403 comes
+        back as HTTP 200 here with <code class="inline">provider_status</code> and
+        <code class="inline">provider_body</code> intact, because a refusal is the answer you asked
+        for, not a failure of the call. Our own status codes stay reserved for our own conditions,
+        so LinkedIn's 429 and our quota 429 can never be confused.
+      </p>
+      <p class="muted">
+        <code class="inline">request_url</code> must be an absolute
+        <code class="inline">https://www.linkedin.com/…</code> URL with the query string already
+        built — LinkedIn's Rest.li syntax uses literal <code class="inline">( ) : ,</code>
+        punctuation that a generic serialiser would encode into something it rejects.
+      </p>
+      <p class="muted">
+        <code class="inline">op_class</code> is <code class="inline">READ</code> or
+        <code class="inline">WRITE</code> and decides which quota budget the call spends.
+        Any mutating method must declare <code class="inline">WRITE</code>. Writes get a much
+        tighter budget than reads, because write volume is what actually gets accounts restricted.
+      </p>
+      <p class="muted">
+        <code class="inline">outcome</code> is the field to branch on:
+        <code class="inline">ok</code> (2xx),
+        <code class="inline">rejected</code> (LinkedIn definitively refused — the request did not
+        take effect, so retrying is safe), or
+        <code class="inline">ambiguous</code> (timeout, 5xx, or a 2xx mutation with an unreadable
+        body — it <em>may</em> have landed, so never blind-retry a non-idempotent write; read state
+        back instead). <code class="inline">rejection_kind: "rate_limited"</code> is the one
+        <code class="inline">rejected</code> you should not immediately retry.
+      </p>
+      <p class="muted">
+        <strong>A 2xx does not prove a field was written.</strong> LinkedIn accepts and silently
+        ignores Rest.li <code class="inline">$set</code> keys it doesn't recognise, answering 200
+        while changing nothing. Verify any partial update by reading the entity back.
+      </p>
+      <p class="muted">
+        Headers are forwarded except session-bearing ones. In particular a
+        <code class="inline">csrf-token</code> copied from a captured browser request is dropped —
+        it is matched against the session cookie we attach, so a replayed one is guaranteed to
+        mismatch. Send <code class="inline">accept</code> and
+        <code class="inline">x-restli-*</code>; we supply the token.
+      </p>
+    </div>
+
+    <h3 style="margin-top:26px;">Search <span class="badge">needs the worker tier</span></h3>
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/search/posts</div>
+      <pre>{ "account_id", "keyword", "filters"?, "limit"? }
+→ 200 { "data": { "run_id", "posts": [...], "count" }, "meta": { "quota" } }
+→ 429 { "error": "quota_exhausted", "retry_after", "next_available_at" }</pre>
+    </div>
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/search/searches</div>
+      <p class="muted">Save a recurring keyword search.</p>
+    </div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/search/searches</div></div>
+    <div class="endpoint"><div class="path"><span class="method patch">PATCH</span>/v1/search/searches/:id</div></div>
+    <div class="endpoint"><div class="path"><span class="method delete">DELETE</span>/v1/search/searches/:id</div></div>
+
+    <h3 style="margin-top:26px;">Posts <span class="badge">free — served from the store</span></h3>
+    <div class="endpoint">
+      <div class="path"><span class="method get">GET</span>/v1/posts</div>
+      <p class="muted">
+        Query: <code class="inline">keyword, author_urn, since, until, min_reactions, q, limit, cursor</code>.
+        Never touches LinkedIn — reads from what your searches have already collected.
+      </p>
+    </div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/posts/:urn</div></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/posts/-/stats</div></div>
+
+    <h3 style="margin-top:26px;">Reactions <span class="badge">needs the worker tier</span></h3>
+    <div class="endpoint">
+      <div class="path"><span class="method post">POST</span>/v1/reactions</div>
+      <p class="muted">
+        Body: <code class="inline">{ "account_id", "post", "type" }</code> — <code class="inline">post</code>
+        accepts a URN or a full LinkedIn post URL. <code class="inline">type</code> is one of
+        <code class="inline">LIKE PRAISE APPRECIATION EMPATHY INTEREST ENTERTAINMENT</code>.
+        Send an <code class="inline">Idempotency-Key</code> header to make retries safe.
+      </p>
+      <pre>→ 202 { "data": { "action_id", "reaction_id", "status": "queued", "estimated_start" } }
+→ 409 { "error": "already_reacted" }</pre>
+      <p class="muted">This is <b>queued, not synchronous</b> — the Governor paces writes and may schedule it minutes ahead. Poll <code class="inline">GET /v1/actions/:id</code> for the outcome.</p>
+    </div>
+    <div class="endpoint"><div class="path"><span class="method delete">DELETE</span>/v1/reactions</div><p class="muted">Un-react. Body: <code class="inline">{ "account_id", "post" }</code>.</p></div>
+    <div class="endpoint"><div class="path"><span class="method post">POST</span>/v1/reactions/bulk</div><p class="muted">Body: <code class="inline">{ "account_id", "items": [{ "post", "type" }] }</code>. Each item is paced independently — not a bypass.</p></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/reactions</div></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/reactions/:id</div></div>
+
+    <h3 style="margin-top:26px;">Actions (async write status)</h3>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/actions/:id</div></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/actions</div></div>
+    <div class="endpoint"><div class="path"><span class="method delete">DELETE</span>/v1/actions/:id</div><p class="muted">Cancel — only while still <code class="inline">queued</code>/<code class="inline">scheduled</code>.</p></div>
+
+    <h3 style="margin-top:26px;">Webhooks</h3>
+    <div class="endpoint"><div class="path"><span class="method post">POST</span>/v1/webhooks</div><p class="muted">Body: <code class="inline">{ "url", "events": [...] }</code>.</p></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/webhooks</div></div>
+    <div class="endpoint"><div class="path"><span class="method delete">DELETE</span>/v1/webhooks/:id</div></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/webhooks/:id/deliveries</div></div>
+    <div class="endpoint"><div class="path"><span class="method post">POST</span>/v1/webhooks/:id/redeliver</div></div>
+
+    <h3 style="margin-top:26px;">Audit &amp; usage</h3>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/audit/requests</div><p class="muted">Every LinkedIn call made on your behalf: endpoint, status, outcome, latency. This exists because you should never have to guess why an account got disconnected.</p></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/usage</div></div>
+    <div class="endpoint"><div class="path"><span class="method get">GET</span>/v1/stats</div></div>
+
+    <h2>A note on safety</h2>
+    <div class="card">
+      <p style="margin:0;" class="muted">
+        Every LinkedIn-touching call above is paced by a rate governor with randomized
+        spacing, working-hours confinement, and a warm-up ramp for new accounts — and halts
+        the account automatically the moment LinkedIn shows a warning sign, rather than
+        retrying into a restriction. Writes (reactions) are always queued, never synchronous,
+        specifically so pacing is enforced by the platform and not left to your application.
+      </p>
+    </div>
+  </main>
+
+  <footer>LinkedIn Connector — not affiliated with LinkedIn Corporation.</footer>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — LinkedIn Connector</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand"><a href="/" style="color:inherit;">LinkedIn Connector</a></div>
+    <nav><a href="/signup.html">Need an account? Sign up</a></nav>
+  </header>
+
+  <main>
+    <h1>Sign in</h1>
+    <form id="form">
+      <label for="email">Email</label>
+      <input id="email" type="email" required />
+
+      <label for="password">Password</label>
+      <input id="password" type="password" required />
+
+      <div class="error" id="error"></div>
+      <button id="submit" type="submit">Sign in</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { auth, ApiError } from "/client.js";
+    const $ = (id) => document.getElementById(id);
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("error").textContent = "";
+      $("submit").disabled = true;
+      try {
+        await auth.signIn($("email").value.trim(), $("password").value);
+        window.location.href = "/dashboard.html";
+      } catch (err) {
+        $("error").textContent = err instanceof ApiError ? err.message : "Could not reach the server.";
+        $("submit").disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
