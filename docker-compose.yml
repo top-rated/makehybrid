@@ -1,0 +1,32 @@
+# NOT needed for the current milestone (auth + extension + connected accounts) --
+# that runs entirely on SQLite, no Docker required. This is for the LATER
+# multi-account / Governor-with-Redis / Postgres milestone described in
+# MVP.md Phase 2-3 and PLAN.md. See README.md "Setup" for what actually runs now.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: linkedin
+      POSTGRES_PASSWORD: linkedin
+      POSTGRES_DB: linkedin
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkedin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  redisdata:
